@@ -1,0 +1,1 @@
+{"version":3,"file":"bookmaker.d.ts","sourceRoot":"","sources":["../src/bookmaker.ts"],"names":[],"mappings":"AAAA,eAAO,MAAM,UAAU,wGASb,CAAC;AAEX,MAAM,MAAM,WAAW,GAAG,CAAC,OAAO,UAAU,CAAC,CAAC,MAAM,CAAC,CAAC;AAEtD,eAAO,MAAM,gBAAgB,EAAE,MAAM,CAAC,WAAW,EAAE,MAAM,CASxD,CAAC"}
