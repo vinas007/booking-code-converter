@@ -18,6 +18,10 @@ export function getConfig() {
       betpawa: process.env.BETPAWA_API_KEY,
       footballcom: process.env.FOOTBALLCOM_API_KEY,
     },
+    stakeOddsApi: {
+      apiKey: process.env.STAKE_ODDS_API_KEY,
+      baseUrl: process.env.STAKE_ODDS_API_BASE_URL || "https://odds-data.stake.com",
+    },
   };
 }
 

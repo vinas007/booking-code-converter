@@ -1,0 +1,1 @@
+{"version":3,"file":"integration-status.d.ts","sourceRoot":"","sources":["../src/integration-status.ts"],"names":[],"mappings":"AAAA,MAAM,MAAM,iBAAiB,GACzB,YAAY,GACZ,aAAa,GACb,UAAU,GACV,qBAAqB,GACrB,aAAa,CAAC;AAElB,eAAO,MAAM,yBAAyB,EAAE,MAAM,CAAC,iBAAiB,EAAE,MAAM,CAMvE,CAAC;AAEF,wBAAgB,kBAAkB,CAChC,MAAM,EAAE,iBAAiB,GACxB,OAAO,CAET"}

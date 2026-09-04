@@ -32,6 +32,7 @@ export interface Event {
   homeTeam: Team;
   awayTeam: Team;
   startTime: string;
+  sourceId?: string;
 }
 
 export type MarketType =
@@ -55,6 +56,8 @@ export interface Market {
   type: MarketType;
   line?: number;
   description?: string;
+  sourceId?: string;
+  rawMarketName?: string;
 }
 
 export type SelectionId = string;

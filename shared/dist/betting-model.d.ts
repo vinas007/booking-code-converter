@@ -24,6 +24,7 @@ export interface Event {
     homeTeam: Team;
     awayTeam: Team;
     startTime: string;
+    sourceId?: string;
 }
 export type MarketType = "1x2" | "doubleChance" | "overUnder" | "bothTeamsToScore" | "handicap" | "correctScore" | "halftimeFulltime" | "drawNoBet" | "totalGoals" | "anytimeGoalscorer" | "other";
 export type MarketId = string;
@@ -33,6 +34,8 @@ export interface Market {
     type: MarketType;
     line?: number;
     description?: string;
+    sourceId?: string;
+    rawMarketName?: string;
 }
 export type SelectionId = string;
 export interface Selection {
