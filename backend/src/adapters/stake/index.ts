@@ -21,8 +21,10 @@ export {
   mapStakeFixtureToEvent,
   mapStakeFixtureWithOdds,
   mapStakeMarket,
+  mapStakeMarketSelections,
   mapStakeSport,
   mapStakeCategory,
   mapStakeTournament,
   type MappedFixtureResult,
+  type MappedSelectionResult,
 } from "./mapper.js";

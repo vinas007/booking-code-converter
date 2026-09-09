@@ -281,8 +281,8 @@ describe("mapStakeFixtureWithOdds", () => {
     expect(result.markets).toHaveLength(2);
     expect(result.markets[0].type).toBe("1x2");
     expect(result.markets[1].type).toBe("other");
-    expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain("Corners 1x2");
+    expect(result.warnings.length).toBeGreaterThanOrEqual(1);
+    expect(result.warnings.some((w) => w.includes("Corners 1x2"))).toBe(true);
   });
 
   it("skips markets without market_id and adds a warning", () => {

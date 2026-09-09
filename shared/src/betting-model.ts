@@ -62,12 +62,30 @@ export interface Market {
 
 export type SelectionId = string;
 
+export type SelectionOutcome =
+  | "HOME"
+  | "DRAW"
+  | "AWAY"
+  | "HOME_OR_DRAW"
+  | "DRAW_OR_AWAY"
+  | "HOME_OR_AWAY"
+  | "OVER"
+  | "UNDER"
+  | "YES"
+  | "NO"
+  | "HANDICAP_HOME"
+  | "HANDICAP_AWAY"
+  | "UNKNOWN";
+
 export interface Selection {
   id: SelectionId;
   marketId: MarketId;
-  outcome: string;
+  outcome: SelectionOutcome;
+  displayName: string;
   odds: number;
   line?: number;
+  sourceId?: string;
+  rawSelectionName?: string;
 }
 
 export interface BookingCode {

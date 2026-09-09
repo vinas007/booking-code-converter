@@ -74,10 +74,122 @@ function extractLineFromSpecifiers(specifiers) {
     }
     return undefined;
 }
+// ─── Selection mapping ─────────────────────────────────────
+const MATCH_RESULT_OUTCOMES = {
+    "1": "HOME",
+    "home": "HOME",
+    "x": "DRAW",
+    "draw": "DRAW",
+    "2": "AWAY",
+    "away": "AWAY",
+};
+const DOUBLE_CHANCE_OUTCOMES = {
+    "1x": "HOME_OR_DRAW",
+    "home_or_draw": "HOME_OR_DRAW",
+    "x2": "DRAW_OR_AWAY",
+    "draw_or_away": "DRAW_OR_AWAY",
+    "12": "HOME_OR_AWAY",
+    "home_or_away": "HOME_OR_AWAY",
+};
+const BTTS_OUTCOMES = {
+    "yes": "YES",
+    "no": "NO",
+};
+const OVER_UNDER_OUTCOMES = {
+    "over": "OVER",
+    "under": "UNDER",
+};
+function normalizeOutcomeName(name) {
+    return name.toLowerCase().trim();
+}
+function mapStakeOutcome(rawOutcome, marketType, homeTeamName, awayTeamName) {
+    const rawName = rawOutcome.name ?? "";
+    const normalized = normalizeOutcomeName(rawName);
+    switch (marketType) {
+        case "1x2": {
+            if (MATCH_RESULT_OUTCOMES[normalized]) {
+                return { outcome: MATCH_RESULT_OUTCOMES[normalized], displayName: rawName };
+            }
+            if (homeTeamName && normalized === normalizeOutcomeName(homeTeamName)) {
+                return { outcome: "HOME", displayName: rawName };
+            }
+            if (awayTeamName && normalized === normalizeOutcomeName(awayTeamName)) {
+                return { outcome: "AWAY", displayName: rawName };
+            }
+            return { outcome: "UNKNOWN", displayName: rawName };
+        }
+        case "doubleChance": {
+            if (DOUBLE_CHANCE_OUTCOMES[normalized]) {
+                return { outcome: DOUBLE_CHANCE_OUTCOMES[normalized], displayName: rawName };
+            }
+            return { outcome: "UNKNOWN", displayName: rawName };
+        }
+        case "bothTeamsToScore": {
+            if (BTTS_OUTCOMES[normalized]) {
+                return { outcome: BTTS_OUTCOMES[normalized], displayName: rawName };
+            }
+            return { outcome: "UNKNOWN", displayName: rawName };
+        }
+        case "overUnder":
+        case "totalGoals": {
+            if (OVER_UNDER_OUTCOMES[normalized]) {
+                return { outcome: OVER_UNDER_OUTCOMES[normalized], displayName: rawName };
+            }
+            return { outcome: "UNKNOWN", displayName: rawName };
+        }
+        case "handicap": {
+            if (homeTeamName && normalized === normalizeOutcomeName(homeTeamName)) {
+                return { outcome: "HANDICAP_HOME", displayName: rawName };
+            }
+            if (awayTeamName && normalized === normalizeOutcomeName(awayTeamName)) {
+                return { outcome: "HANDICAP_AWAY", displayName: rawName };
+            }
+            if (normalized === "1" || normalized === "home") {
+                return { outcome: "HANDICAP_HOME", displayName: rawName };
+            }
+            if (normalized === "2" || normalized === "away") {
+                return { outcome: "HANDICAP_AWAY", displayName: rawName };
+            }
+            return { outcome: "UNKNOWN", displayName: rawName };
+        }
+        default:
+            return { outcome: "UNKNOWN", displayName: rawName };
+    }
+}
+export function mapStakeMarketSelections(rawMarket, marketType, marketId, homeTeamName, awayTeamName) {
+    const selections = [];
+    const warnings = [];
+    const line = extractLineFromSpecifiers(rawMarket.specifiers);
+    const rawOutcomes = rawMarket.outcomes ?? [];
+    for (const rawOutcome of rawOutcomes) {
+        if (!rawOutcome.name) {
+            warnings.push(`Skipped outcome without name in market "${rawMarket.market_name}"`);
+            continue;
+        }
+        const { outcome, displayName } = mapStakeOutcome(rawOutcome, marketType, homeTeamName, awayTeamName);
+        const selection = {
+            id: `${marketId}:${rawOutcome.name}`,
+            marketId,
+            outcome,
+            displayName,
+            odds: rawOutcome.odds,
+            line,
+            rawSelectionName: rawOutcome.name,
+        };
+        if (outcome === "UNKNOWN") {
+            warnings.push(`Outcome "${rawOutcome.name}" in market "${rawMarket.market_name}" could not be mapped to a canonical outcome — preserved as UNKNOWN`);
+        }
+        selections.push(selection);
+    }
+    return { selections, warnings };
+}
 export function mapStakeFixtureWithOdds(raw) {
     const event = mapStakeFixtureToEvent(raw);
     const warnings = [];
     const markets = [];
+    const selections = [];
+    const homeTeamName = event.homeTeam.name;
+    const awayTeamName = event.awayTeam.name;
     const rawMarkets = raw.markets ?? [];
     for (const rawMarket of rawMarkets) {
         if (!rawMarket.market_id) {
@@ -93,7 +205,10 @@ export function mapStakeFixtureWithOdds(raw) {
             warnings.push(`Market "${rawMarket.market_name}" (template: "${rawMarket.template_name}") could not be mapped to a canonical market type — preserved as "other"`);
         }
         markets.push(mapped);
+        const selectionResult = mapStakeMarketSelections(rawMarket, mapped.type, mapped.id, homeTeamName, awayTeamName);
+        selections.push(...selectionResult.selections);
+        warnings.push(...selectionResult.warnings);
     }
-    return { event, markets, warnings };
+    return { event, markets, selections, warnings };
 }
 //# sourceMappingURL=mapper.js.map
