@@ -1,43 +1,101 @@
-import type { BookmakerAdapter } from "@booking-code-converter/shared";
+import type {
+  BookmakerAdapter,
+  BookingCodeCapabilities,
+  AdapterOperationResult,
+  BookingCode,
+  Selection,
+  Event,
+  Market,
+} from "@booking-code-converter/shared";
 import type { SportyBetAdapterConfig } from "./types.js";
+import { SportyBetClient } from "./client.js";
+
+const SPORTYBET_CAPABILITIES: BookingCodeCapabilities = {
+  canResolveBookingCode: "verified",
+  canLoadSelections: "verified",
+  canFindEvents: "unverified",
+  canFindMarkets: "unverified",
+  canValidateSelections: "unverified",
+  canCreateBookingCode: "unverified",
+};
 
 export class SportyBetAdapter implements BookmakerAdapter {
   readonly bookmakerId = "sportybet" as const;
 
-  constructor(private readonly config: SportyBetAdapterConfig) {}
+  private readonly client: SportyBetClient;
 
-  getCapabilities() {
+  constructor(config: SportyBetAdapterConfig) {
+    this.client = new SportyBetClient({
+      baseUrl: config.baseUrl,
+      region: "ng",
+      timeoutMs: config.timeoutMs,
+    });
+  }
+
+  getCapabilities(): BookingCodeCapabilities {
+    return SPORTYBET_CAPABILITIES;
+  }
+
+  async resolveBookingCode(
+    input: { code: string },
+  ): Promise<AdapterOperationResult<BookingCode>> {
+    const booking = await this.client.getBooking(input.code);
+
     return {
-      canResolveBookingCode: "unverified" as const,
-      canLoadSelections: "unverified" as const,
-      canFindEvents: "unverified" as const,
-      canFindMarkets: "unverified" as const,
-      canValidateSelections: "unverified" as const,
-      canCreateBookingCode: "unverified" as const,
+      data: {
+        bookmaker: "sportybet",
+        code: booking.shareCode,
+      },
     };
   }
 
-  async resolveBookingCode(): Promise<never> {
-    throw new Error("SportyBetAdapter.resolveBookingCode: UNVERIFIED — not implemented");
+  async loadSelections(
+    input: { code: string },
+  ): Promise<AdapterOperationResult<Selection[]>> {
+    const booking = await this.client.getBooking(input.code);
+
+    const selections: Selection[] = booking.selections.map((selection) => ({
+      id: `${selection.eventId}:${selection.marketId}:${selection.outcomeId}`,
+      marketId: selection.marketId,
+      outcome: "UNKNOWN",
+      displayName: selection.outcomeId,
+      odds: 0,
+      sourceId: selection.outcomeId,
+      rawSelectionName: selection.outcomeId,
+    }));
+
+    return {
+      data: selections,
+    };
   }
 
-  async loadSelections(): Promise<never> {
-    throw new Error("SportyBetAdapter.loadSelections: UNVERIFIED — not implemented");
+  async findEvents(
+    input: { selections: Selection[] },
+  ): Promise<AdapterOperationResult<Event[]>> {
+    throw new Error("SportyBet event matching is not implemented yet.");
   }
 
-  async findEvents(): Promise<never> {
-    throw new Error("SportyBetAdapter.findEvents: UNVERIFIED — not implemented");
+  async findMarkets(
+    input: { events: Event[]; selections: Selection[] },
+  ): Promise<AdapterOperationResult<Market[]>> {
+    throw new Error("SportyBet market matching is not implemented yet.");
   }
 
-  async findMarkets(): Promise<never> {
-    throw new Error("SportyBetAdapter.findMarkets: UNVERIFIED — not implemented");
+  async validateSelections(
+    input: {
+      selections: Selection[];
+      events: Event[];
+      markets: Market[];
+    },
+  ): Promise<AdapterOperationResult<boolean>> {
+    throw new Error("SportyBet selection validation is not implemented yet.");
   }
 
-  async validateSelections(): Promise<never> {
-    throw new Error("SportyBetAdapter.validateSelections: UNVERIFIED — not implemented");
-  }
-
-  async createBookingCode(): Promise<never> {
-    throw new Error("SportyBetAdapter.createBookingCode: UNVERIFIED — not implemented");
+  async createBookingCode(
+    input: { selections: Selection[] },
+  ): Promise<AdapterOperationResult<BookingCode>> {
+    throw new Error(
+      "SportyBet booking creation will be connected after selection mapping is implemented.",
+    );
   }
 }
