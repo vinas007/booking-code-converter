@@ -9,7 +9,10 @@ import type {
 } from "@booking-code-converter/shared";
 import type { SportyBetAdapterConfig } from "./types.js";
 import { SportyBetClient } from "./client.js";
-import { mapSportyBetOutcomeToEvent } from "./event.js";
+import {
+  mapSportyBetOutcomeToEvent,
+  type SportyBetBookingOutcome,
+} from "./event.js";
 
 const SPORTYBET_CAPABILITIES: BookingCodeCapabilities = {
   canResolveBookingCode: "verified",
@@ -24,7 +27,10 @@ export class SportyBetAdapter implements BookmakerAdapter {
   readonly bookmakerId = "sportybet" as const;
 
   private readonly client: SportyBetClient;
-  private readonly bookings = new Map<string, Awaited<ReturnType<SportyBetClient["getBooking"]>>>();
+  private readonly bookings = new Map<
+    string,
+    Awaited<ReturnType<SportyBetClient["getBooking"]>>
+  >();
 
   constructor(config: SportyBetAdapterConfig) {
     this.client = new SportyBetClient({
@@ -111,7 +117,9 @@ export class SportyBetAdapter implements BookmakerAdapter {
     if (!booking) {
       return {
         data: [],
-        warnings: ["SportyBet booking data is not available for these selections."],
+        warnings: [
+          "SportyBet booking data is not available for these selections.",
+        ],
       };
     }
 
@@ -120,7 +128,7 @@ export class SportyBetAdapter implements BookmakerAdapter {
 
     for (const eventId of eventIds) {
       const rawOutcome = booking.outcomes?.find(
-        (outcome) =>
+        (outcome): outcome is SportyBetBookingOutcome =>
           typeof outcome === "object" &&
           outcome !== null &&
           "eventId" in outcome &&
@@ -178,7 +186,9 @@ export class SportyBetAdapter implements BookmakerAdapter {
       markets: Market[];
     },
   ): Promise<AdapterOperationResult<boolean>> {
-    throw new Error("SportyBet selection validation is not implemented yet.");
+    throw new Error(
+      "SportyBet selection validation is not implemented yet.",
+    );
   }
 
   async createBookingCode(

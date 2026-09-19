@@ -4,6 +4,7 @@ import type {
 } from "@booking-code-converter/shared";
 import { UnsupportedOperationError } from "@booking-code-converter/shared";
 import type { AdapterRegistry } from "../adapters/registry.js";
+import { resolveBookmakerEvents } from "../matching/bookmaker-event-resolver.js";
 
 export class ConversionServiceImpl {
   constructor(private readonly registry: AdapterRegistry) {}
@@ -45,18 +46,70 @@ export class ConversionServiceImpl {
         code: resolved.data.code,
       });
 
-      const events = await targetAdapter.findEvents({
+      const sourceEvents = await sourceAdapter.findEvents({
         selections: selections.data,
       });
 
+      if (sourceEvents.data.length === 0) {
+        return {
+          source: request.source,
+          target: { bookmaker: request.target },
+          selections: selections.data,
+          events: [],
+          markets: [],
+          status: "failed",
+          message: "No source events could be resolved from the booking.",
+        };
+      }
+
+      const targetEvents = await targetAdapter.findEvents({
+        selections: selections.data,
+      });
+
+      if (targetEvents.data.length === 0) {
+        return {
+          source: request.source,
+          target: { bookmaker: request.target },
+          selections: selections.data,
+          events: [],
+          markets: [],
+          status: "failed",
+          message: "No target bookmaker events were found.",
+        };
+      }
+
+      const resolutions = resolveBookmakerEvents(
+        sourceEvents.data,
+        targetEvents.data,
+      );
+
+      const matchedEvents = resolutions
+        .filter((resolution) => resolution.matched && resolution.target)
+        .map((resolution) => resolution.target!);
+
+      if (matchedEvents.length !== sourceEvents.data.length) {
+        const unmatchedCount =
+          sourceEvents.data.length - matchedEvents.length;
+
+        return {
+          source: request.source,
+          target: { bookmaker: request.target },
+          selections: selections.data,
+          events: matchedEvents,
+          markets: [],
+          status: "failed",
+          message: `${unmatchedCount} source event(s) could not be matched on the target bookmaker.`,
+        };
+      }
+
       const markets = await targetAdapter.findMarkets({
-        events: events.data,
+        events: matchedEvents,
         selections: selections.data,
       });
 
       const valid = await targetAdapter.validateSelections({
         selections: selections.data,
-        events: events.data,
+        events: matchedEvents,
         markets: markets.data,
       });
 
@@ -65,7 +118,7 @@ export class ConversionServiceImpl {
           source: request.source,
           target: { bookmaker: request.target },
           selections: selections.data,
-          events: events.data,
+          events: matchedEvents,
           markets: markets.data,
           status: "failed",
           message: "Selections could not be validated on the target bookmaker.",
@@ -83,7 +136,7 @@ export class ConversionServiceImpl {
           code: created.data.code,
         },
         selections: selections.data,
-        events: events.data,
+        events: matchedEvents,
         markets: markets.data,
         status: "success",
         message: "Booking code converted successfully.",
