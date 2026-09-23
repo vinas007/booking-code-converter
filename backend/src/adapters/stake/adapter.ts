@@ -18,11 +18,7 @@ import {
 } from "./mapper.js";
 import type {
   StakeSportsResponse,
-  StakeCategoryResponse,
-  StakeTournamentResponse,
   StakeFixtureResponse,
-  StakeFixtureWithOdds,
-  StakeFixture,
 } from "./types.js";
 
 const STAKE_CAPABILITIES: BookingCodeCapabilities = {
@@ -58,41 +54,105 @@ export class StakeAdapter implements BookmakerAdapter {
     const data = await this.client.getSports() as StakeSportsResponse;
     const fixtures = data.fixture ?? [];
     const events = fixtures.map(mapStakeFixtureToEvent);
+
     return { data: events };
   }
 
-  async findMarkets(input: { events: Event[] }): Promise<AdapterOperationResult<Market[]>> {
+  async findMarkets(
+    input: { events: Event[] },
+  ): Promise<AdapterOperationResult<Market[]>> {
     const allMarkets: Market[] = [];
     const allWarnings: string[] = [];
 
     for (const event of input.events) {
       const fixtureSlug = event.sourceId ?? event.id;
+
       try {
-        const data = await this.client.getFixtureOdds(fixtureSlug) as StakeFixtureResponse;
+        const data = await this.client.getFixtureOdds(
+          fixtureSlug,
+        ) as StakeFixtureResponse;
+
         const fixtures = data.fixture ?? [];
 
         for (const fixture of fixtures) {
-          const result: MappedFixtureResult = mapStakeFixtureWithOdds(fixture);
+          const result: MappedFixtureResult =
+            mapStakeFixtureWithOdds(fixture);
+
           allMarkets.push(...result.markets);
           allWarnings.push(...result.warnings);
         }
       } catch (err) {
         if (err instanceof StakeApiError && err.code === "not_found") {
-          allWarnings.push(`Fixture "${fixtureSlug}" not found on Stake API`);
+          allWarnings.push(
+            `Fixture "${fixtureSlug}" not found on Stake API`,
+          );
           continue;
         }
+
         throw err;
       }
     }
 
-    return { data: allMarkets, warnings: allWarnings.length > 0 ? allWarnings : undefined };
+    return {
+      data: allMarkets,
+      warnings:
+        allWarnings.length > 0 ? allWarnings : undefined,
+    };
+  }
+
+  async findSelections(
+    events: Event[],
+  ): Promise<AdapterOperationResult<Selection[]>> {
+    const allSelections: Selection[] = [];
+    const allWarnings: string[] = [];
+
+    for (const event of events) {
+      const fixtureSlug = event.sourceId ?? event.id;
+
+      try {
+        const data = await this.client.getFixtureOdds(
+          fixtureSlug,
+        ) as StakeFixtureResponse;
+
+        const fixtures = data.fixture ?? [];
+
+        for (const fixture of fixtures) {
+          const result: MappedFixtureResult =
+            mapStakeFixtureWithOdds(fixture);
+
+          allSelections.push(...result.selections);
+          allWarnings.push(...result.warnings);
+        }
+      } catch (err) {
+        if (err instanceof StakeApiError && err.code === "not_found") {
+          allWarnings.push(
+            `Fixture "${fixtureSlug}" not found on Stake API`,
+          );
+          continue;
+        }
+
+        throw err;
+      }
+    }
+
+    return {
+      data: allSelections,
+      warnings:
+        allWarnings.length > 0 ? allWarnings : undefined,
+    };
   }
 
   async validateSelections(): Promise<AdapterOperationResult<boolean>> {
-    throw new UnsupportedOperationError("validateSelections", "stake");
+    throw new UnsupportedOperationError(
+      "validateSelections",
+      "stake",
+    );
   }
 
   async createBookingCode(): Promise<AdapterOperationResult<BookingCode>> {
-    throw new UnsupportedOperationError("createBookingCode", "stake");
+    throw new UnsupportedOperationError(
+      "createBookingCode",
+      "stake",
+    );
   }
 }

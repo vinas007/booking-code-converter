@@ -111,23 +111,23 @@ describe("SportyBetAdapter", () => {
   });
 
   it("returns a warning when no selections are supplied", async () => {
-  const adapter = new SportyBetAdapter({});
-
-  const result = await adapter.findEvents({ selections: [] });
-
-  expect(result.data).toEqual([]);
-  expect(result.warnings).toContain("No SportyBet selections supplied.");
-});
-
-  it("keeps market matching unimplemented", async () => {
     const adapter = new SportyBetAdapter({});
 
-    await expect(
-      adapter.findMarkets({
-        events: [],
-        selections: [],
-      }),
-    ).rejects.toThrow("not implemented");
+    const result = await adapter.findEvents({ selections: [] });
+
+    expect(result.data).toEqual([]);
+    expect(result.warnings).toContain("No SportyBet selections supplied.");
+  });
+
+  it("loads SportyBet markets", async () => {
+    const adapter = new SportyBetAdapter({});
+
+    const result = await adapter.findMarkets({
+      events: [],
+      selections: [],
+    });
+
+    expect(result.data).toEqual([]);
   });
 
   it("keeps selection validation unimplemented", async () => {
@@ -149,7 +149,7 @@ describe("SportyBetAdapter", () => {
       adapter.createBookingCode({
         selections: [],
       }),
-    ).rejects.toThrow("will be connected");
+    ).rejects.toThrow("not implemented");
   });
 });
 

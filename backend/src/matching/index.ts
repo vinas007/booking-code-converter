@@ -1,11 +1,21 @@
 export { matchEvents, normalizeTeamName } from "./event-matcher.js";
 export { resolveEvent } from "./event-resolver.js";
+
 export {
   resolveBookmakerEvent,
   resolveBookmakerEvents,
 } from "./bookmaker-event-resolver.js";
 
 export { matchMarkets } from "./market-matcher.js";
+
+export {
+  matchSelections,
+  resolveSelection,
+} from "./selection-matcher.js";
+
+export {
+  resolveSelections,
+} from "./selection-resolver.js";
 
 export type {
   EventMatchResult,
@@ -23,6 +33,14 @@ export type {
 export type {
   BookmakerEventResolution,
 } from "./bookmaker-event-resolver.js";
+
+export type {
+  SelectionMatchResult,
+} from "./selection-matcher.js";
+
+export type {
+  SelectionResolutionResult,
+} from "./selection-resolver.js";
 
 export {
   DEFAULT_START_TIME_TOLERANCE_MS,
