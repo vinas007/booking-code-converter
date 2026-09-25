@@ -4,12 +4,17 @@ import type {
   ConversionRequest,
   ConversionResult,
   Event,
+  Market,
   Selection,
 } from "@booking-code-converter/shared";
 import { UnsupportedOperationError } from "@booking-code-converter/shared";
 import type { AdapterRegistry } from "../adapters/registry.js";
 import { resolveBookmakerEvents } from "../matching/bookmaker-event-resolver.js";
-import { resolveSelections } from "../matching/selection-resolver.js";
+import { resolveMarkets } from "../matching/market-resolver.js";
+import {
+  resolveSelections,
+  type SelectionMarketMapping,
+} from "../matching/selection-resolver.js";
 
 interface SelectionCapableAdapter extends BookmakerAdapter {
   findSelections(
@@ -80,6 +85,11 @@ export class ConversionServiceImpl {
         };
       }
 
+      const sourceMarkets = await sourceAdapter.findMarkets({
+        events: sourceEvents.data,
+        selections: sourceSelections.data,
+      });
+
       const targetEvents = await targetAdapter.findEvents({
         selections: sourceSelections.data,
       });
@@ -90,7 +100,7 @@ export class ConversionServiceImpl {
           target: { bookmaker: request.target },
           selections: sourceSelections.data,
           events: [],
-          markets: [],
+          markets: sourceMarkets.data,
           status: "failed",
           message: "No target bookmaker events were found.",
         };
@@ -114,25 +124,68 @@ export class ConversionServiceImpl {
           target: { bookmaker: request.target },
           selections: sourceSelections.data,
           events: matchedEvents,
-          markets: [],
+          markets: sourceMarkets.data,
           status: "failed",
           message: `${unmatchedCount} source event(s) could not be matched on the target bookmaker.`,
         };
       }
 
-      const markets = await targetAdapter.findMarkets({
+      const eventMappings = eventResolutions
+        .filter((resolution) => resolution.matched && resolution.target)
+        .map((resolution) => ({
+          sourceEventId: resolution.source.id,
+          targetEventId: resolution.target!.id,
+        }));
+
+      const targetMarkets = await targetAdapter.findMarkets({
         events: matchedEvents,
         selections: sourceSelections.data,
       });
+
+      const marketResolutions = resolveMarkets(
+        sourceMarkets.data,
+        targetMarkets.data,
+        eventMappings,
+      );
+
+      const matchedMarkets = marketResolutions
+        .filter((resolution) => resolution.matched && resolution.target)
+        .map((resolution) => resolution.target!);
+
+      if (matchedMarkets.length !== sourceMarkets.data.length) {
+        const unmatchedCount =
+          sourceMarkets.data.length - matchedMarkets.length;
+
+        return {
+          source: request.source,
+          target: { bookmaker: request.target },
+          selections: sourceSelections.data,
+          events: matchedEvents,
+          markets: matchedMarkets,
+          status: "failed",
+          message: `${unmatchedCount} source market(s) could not be matched on the target bookmaker.`,
+        };
+      }
 
       if (hasSelectionLookup(targetAdapter)) {
         const targetSelections = await targetAdapter.findSelections(
           matchedEvents,
         );
 
+        const selectionMarketMappings: SelectionMarketMapping[] =
+          marketResolutions
+            .filter(
+              (resolution) => resolution.matched && resolution.target,
+            )
+            .map((resolution) => ({
+              sourceMarketId: resolution.source.id,
+              targetMarketId: resolution.target!.id,
+            }));
+
         const selectionResolutions = resolveSelections(
           sourceSelections.data,
           targetSelections.data,
+          selectionMarketMappings,
         );
 
         const matchedSelections = selectionResolutions
@@ -148,7 +201,7 @@ export class ConversionServiceImpl {
             target: { bookmaker: request.target },
             selections: matchedSelections,
             events: matchedEvents,
-            markets: markets.data,
+            markets: matchedMarkets,
             status: "failed",
             message: `${unmatchedCount} source selection(s) could not be matched on the target bookmaker.`,
           };
@@ -157,7 +210,7 @@ export class ConversionServiceImpl {
         const valid = await targetAdapter.validateSelections({
           selections: matchedSelections,
           events: matchedEvents,
-          markets: markets.data,
+          markets: matchedMarkets,
         });
 
         if (!valid.data) {
@@ -166,7 +219,7 @@ export class ConversionServiceImpl {
             target: { bookmaker: request.target },
             selections: matchedSelections,
             events: matchedEvents,
-            markets: markets.data,
+            markets: matchedMarkets,
             status: "failed",
             message:
               "Selections could not be validated on the target bookmaker.",
@@ -185,7 +238,7 @@ export class ConversionServiceImpl {
           },
           selections: matchedSelections,
           events: matchedEvents,
-          markets: markets.data,
+          markets: matchedMarkets,
           status: "success",
           message: "Booking code converted successfully.",
         };
@@ -194,7 +247,7 @@ export class ConversionServiceImpl {
       const valid = await targetAdapter.validateSelections({
         selections: sourceSelections.data,
         events: matchedEvents,
-        markets: markets.data,
+        markets: matchedMarkets,
       });
 
       if (!valid.data) {
@@ -203,7 +256,7 @@ export class ConversionServiceImpl {
           target: { bookmaker: request.target },
           selections: sourceSelections.data,
           events: matchedEvents,
-          markets: markets.data,
+          markets: matchedMarkets,
           status: "failed",
           message: "Selections could not be validated on the target bookmaker.",
         };
@@ -221,7 +274,7 @@ export class ConversionServiceImpl {
         },
         selections: sourceSelections.data,
         events: matchedEvents,
-        markets: markets.data,
+        markets: matchedMarkets,
         status: "success",
         message: "Booking code converted successfully.",
       };

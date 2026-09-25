@@ -9,6 +9,11 @@ export {
 export { matchMarkets } from "./market-matcher.js";
 
 export {
+  resolveMarket,
+  resolveMarkets,
+} from "./market-resolver.js";
+
+export {
   matchSelections,
   resolveSelection,
 } from "./selection-matcher.js";
@@ -33,6 +38,11 @@ export type {
 export type {
   BookmakerEventResolution,
 } from "./bookmaker-event-resolver.js";
+
+export type {
+  EventMarketMapping,
+  MarketResolutionResult,
+} from "./market-resolver.js";
 
 export type {
   SelectionMatchResult,
